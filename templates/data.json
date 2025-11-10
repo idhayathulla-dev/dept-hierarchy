@@ -1,0 +1,127 @@
+{
+  "hierarchy": {
+    "name": "Head Office",
+    "head": "R. Singh",
+    "employees": 120,
+    "budget": 1500000,
+    "perf": 9.2,
+    "children": [
+      {
+        "name": "Finance",
+        "head": "S. Patel",
+        "employees": 18,
+        "budget": 250000,
+        "perf": 8.4,
+        "children": [
+          {
+            "name": "Accounts Payable",
+            "head": "G. Rao",
+            "employees": 6,
+            "budget": 60000,
+            "perf": 7.8,
+            "children": []
+          },
+          {
+            "name": "Accounts Receivable",
+            "head": "N. Iyer",
+            "employees": 6,
+            "budget": 70000,
+            "perf": 8.0,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "HR",
+        "head": "M. Khan",
+        "employees": 10,
+        "budget": 150000,
+        "perf": 8.1,
+        "children": [
+          {
+            "name": "Recruitment",
+            "head": "A. Verma",
+            "employees": 4,
+            "budget": 40000,
+            "perf": 7.5,
+            "children": []
+          },
+          {
+            "name": "Employee Relations",
+            "head": "L. Das",
+            "employees": 6,
+            "budget": 50000,
+            "perf": 8.2,
+            "children": []
+          }
+        ]
+      },
+      {
+        "name": "Engineering",
+        "head": "K. Mehta",
+        "employees": 60,
+        "budget": 900000,
+        "perf": 9.0,
+        "children": [
+          {
+            "name": "Software",
+            "head": "D. Rao",
+            "employees": 35,
+            "budget": 600000,
+            "perf": 9.3,
+            "children": [
+              {
+                "name": "AI Team",
+                "head": "P. Sharma",
+                "employees": 12,
+                "budget": 300000,
+                "perf": 9.6,
+                "children": []
+              },
+              {
+                "name": "Testing",
+                "head": "R. Nair",
+                "employees": 8,
+                "budget": 80000,
+                "perf": 8.7,
+                "children": []
+              }
+            ]
+          },
+          {
+            "name": "Hardware",
+            "head": "T. Bose",
+            "employees": 25,
+            "budget": 300000,
+            "perf": 8.8,
+            "children": [
+              {
+                "name": "Manufacturing",
+                "head": "V. Gupta",
+                "employees": 20,
+                "budget": 250000,
+                "perf": 8.5,
+                "children": []
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "heap": [
+    [1, "Head Office"],
+    [2, "Finance"],
+    [3, "HR"],
+    [4, "Engineering"],
+    [5, "Accounts Payable"],
+    [6, "Accounts Receivable"],
+    [7, "Recruitment"],
+    [8, "Employee Relations"],
+    [9, "Software"],
+    [10, "Hardware"],
+    [11, "AI Team"],
+    [12, "Testing"],
+    [13, "Manufacturing"]
+  ]
+}

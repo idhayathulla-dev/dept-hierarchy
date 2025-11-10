@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Department Dashboard</title>
+
+<!-- CDN libraries -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+:root{
+  --bg:#f4f7fb; --card:#ffffff; --accent:#0b63d6; --muted:#6b7280;
+  --glass: rgba(255,255,255,0.75);
+}
+*{box-sizing:border-box}
+body{
+  margin:0;font-family:Inter,Segoe UI,Arial,sans-serif;
+  background: linear-gradient(180deg,#eef2ff 0%, #f8fafc 100%);
+  color:#0f172a;
+}
+.header{
+  background:linear-gradient(90deg,var(--accent),#1348b3);
+  color:white;padding:18px 28px;font-weight:600;display:flex;align-items:center;justify-content:space-between;
+  box-shadow:0 6px 20px rgba(11,99,214,0.12);
+}
+.header .title{font-size:18px}
+.header .meta{font-size:13px;opacity:.95}
+.container{display:grid;grid-template-columns: 1fr 360px;gap:22px;max-width:1200px;margin:28px auto;padding:0 18px;}
+.main{
+  background:var(--card);border-radius:12px;padding:18px;box-shadow:0 8px 30px rgba(11,63,131,0.06);
+  min-height:560px;
+}
+.sidebar{
+  background:var(--card);border-radius:12px;padding:18px;box-shadow:0 8px 30px rgba(11,63,131,0.04);
+}
+.controls{display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap}
+.input,select{padding:10px;border-radius:8px;border:1px solid #e6e9ef;background:white;font-size:14px;min-width:0}
+.btn{background:var(--accent);color:white;padding:10px 14px;border-radius:8px;border:none;cursor:pointer}
+.btn.secondary{background:#eef2ff;color:var(--accent);border:1px solid #cfe0ff}
+.row{display:flex;gap:12px;align-items:center}
+.h2{font-size:16px;color:var(--accent);margin:12px 0 8px;font-weight:600}
+.tree-wrap{max-height:320px;overflow:auto;padding:6px;border-radius:8px;border:1px dashed #eef2ff}
+ul{list-style:none;padding-left:10px;margin:6px 0}
+.node{padding:6px 8px;border-radius:8px;margin:6px 0;display:flex;justify-content:space-between;align-items:center;gap:8px}
+.node:hover{background:linear-gradient(90deg,#f1f8ff, #eef6ff)}
+.node .left{display:flex;gap:8px;align-items:center}
+.badge{font-size:12px;padding:4px 8px;border-radius:999px;background:#f1f8ff;color:var(--accent);border:1px solid #d7e9ff}
+.subtle{color:var(--muted);font-size:13px}
+.meta-row{display:flex;justify-content:space-between;gap:10px;margin-top:8px}
+.card{background:linear-gradient(180deg,#fff,#fbfdff);padding:12px;border-radius:10px;box-shadow:0 6px 18px rgba(8,22,48,0.04)}
+.search{flex:1;padding:8px 10px;border-radius:8px;border:1px solid #e6e9ef}
+.actions{display:flex;gap:8px;align-items:center}
+.footer-note{font-size:12px;color:var(--muted);text-align:center;margin-top:12px}
+.kv{font-weight:600;color:#0f172a}
+.topbar-right{display:flex;gap:10px;align-items:center}
+.switch{display:inline-flex;align-items:center;gap:8px}
+.small{font-size:12px;color:var(--muted)}
+.canvas-wrap{display:flex;gap:12px;flex-wrap:wrap;margin-top:12px}
+.chart-card{flex:1;min-width:260px}
+.highlight{background: linear-gradient(90deg,#fff8e6,#fff3d0);border:1px solid #ffe6a8}
+.tooltip{font-size:13px;color:var(--muted)}
+@media(max-width:980px){.container{grid-template-columns:1fr;}.sidebar{order:2}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="title">Department Dashboard — Advanced</div>
+  <div class="topbar-right">
+    <div class="small">Your project — improved UI & analytics</div>
+    <button class="btn secondary" onclick="exportPNG()">Export PNG</button>
+    <button class="btn secondary" onclick="exportPDF()">Export PDF</button>
+    <button class="btn" id="themeBtn" onclick="toggleTheme()"><i class="fa-regular fa-moon"></i></button>
+  </div>
+</div>
+
+<div class="container">
+  <div class="main">
+    <div class="controls">
+      <input id="search" class="search" placeholder="Search department by name..." oninput="searchNodes()">
+      <select id="filter" class="input">
+        <option value="">Filter: All</option>
+        <option value="top">Top priority (<=3)</option>
+        <option value="high-emp">High employees (>=20)</option>
+      </select>
+      <button class="btn" onclick="openAddModal()">+ Add Department</button>
+    </div>
+
+    <div class="row">
+      <div style="flex:1">
+        <div class="h2">Organization Hierarchy</div>
+        <div class="tree-wrap card" id="treeArea"></div>
+      </div>
+      <div style="width:320px;margin-left:12px">
+        <div class="h2">Priority Overview</div>
+        <div class="card">
+          <canvas id="priorityChart" height="220"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <div class="h2">Analytics</div>
+    <div class="canvas-wrap">
+      <div class="chart-card card">
+        <div class="subtle">Employees distribution</div>
+        <canvas id="empChart" height="200"></canvas>
+      </div>
+      <div class="chart-card card">
+        <div class="subtle">Budget allocation</div>
+        <canvas id="budgetChart" height="200"></canvas>
+      </div>
+      <div class="chart-card card">
+        <div class="subtle">Performance index (scatter)</div>
+        <canvas id="perfChart" height="200"></canvas>
+      </div>
+    </div>
+
+  </div>
+
+  <div class="sidebar">
+    <div class="h2">Details</div>
+    <div id="detailCard" class="card">
+      <div id="noSelection" class="subtle">Click a department to view details</div>
+      <div id="detailContent" style="display:none">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div><div id="dName" style="font-weight:700;font-size:16px"></div><div class="subtle" id="dHead"></div></div>
+          <div class="badge" id="dPriority">PR</div>
+        </div>
+
+        <div class="meta-row">
+          <div><div class="small subtle">Employees</div><div class="kv" id="dEmp"></div></div>
+          <div><div class="small subtle">Budget</div><div class="kv" id="dBud"></div></div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="small subtle">Performance</div>
+          <div id="dPerf" style="font-weight:700"></div>
+        </div>
+
+        <div style="margin-top:12px;display:flex;gap:8px">
+          <button class="btn" onclick="openEditModal()">Edit</button>
+          <button class="btn secondary" onclick="deleteSelected()">Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="h2" style="margin-top:14px">Quick Stats</div>
+    <div class="card" style="margin-top:8px">
+      <div style="display:flex;justify-content:space-between"><div class="small subtle">Total Departments</div><div id="statCount" class="kv">0</div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px"><div class="small subtle">Total Employees</div><div id="statEmp" class="kv">0</div></div>
+      <div style="display:flex;justify-content:space-between;margin-top:8px"><div class="small subtle">Total Budget</div><div id="statBud" class="kv">0</div></div>
+    </div>
+
+    <div class="footer-note">Made for academic submission — improved UI components & export</div>
+  </div>
+</div>
+
+<!-- Add / Edit modal (vanilla) -->
+<div id="modal" style="display:none;position:fixed;inset:0;background:rgba(6,10,20,0.45);align-items:center;justify-content:center;padding:20px;">
+  <div style="background:white;border-radius:12px;padding:18px;min-width:320px;max-width:620px;">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+      <div style="font-weight:700" id="modalTitle">Add Department</div>
+      <button onclick="closeModal()" style="background:none;border:none;font-size:18px;cursor:pointer">&times;</button>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+      <input id="m_name" placeholder="Name" class="input">
+      <input id="m_parent" placeholder="Parent (optional)" class="input">
+      <input id="m_head" placeholder="Head" class="input">
+      <input id="m_employees" placeholder="Employees" type="number" class="input">
+      <input id="m_budget" placeholder="Budget" type="number" class="input">
+      <input id="m_perf" placeholder="Performance (0-10)" type="number" class="input">
+      <input id="m_priority" placeholder="Priority integer (lower -> higher)" type="number" class="input">
+    </div>
+
+    <div style="display:flex;justify-content:flex-end;margin-top:12px;gap:8px">
+      <button class="btn secondary" onclick="closeModal()">Cancel</button>
+      <button class="btn" id="modalSave" onclick="saveModal()">Save</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ------------------- Helpers & state ------------------- */
+let currentSelected = null;
+let rawHierarchy = {};
+let rawHeap = [];
+let chartPriority, chartEmp, chartBud, chartPerf;
+let isEditMode = false;
+
+async function fetchData(){
+  const h = await fetch('/hierarchy').then(r=>r.json());
+  const heap = await fetch('/heap').then(r=>r.json());
+  const meta = await fetch('/meta').then(r=>r.json());
+  rawHierarchy = h;
+  rawHeap = heap;
+  return {h, heap, meta};
+}
+
+/* ------------------- Rendering tree ------------------- */
+function makeNodeElement(node){
+  const div = document.createElement('div');
+  div.className = 'node';
+  div.innerHTML = `
+    <div class="left">
+      <div style="display:flex;flex-direction:column">
+        <div style="font-weight:600">${node.name}</div>
+        <div class="subtle" style="font-size:12px">${node.head || ''}</div>
+      </div>
+    </div>
+    <div class="actions">
+      <div class="badge">Emp ${node.employees}</div>
+      <div class="subtle" style="font-size:12px">B ${formatNum(node.budget)}</div>
+    </div>`;
+  div.onclick = (e) => { e.stopPropagation(); selectNode(node.name); };
+  return div;
+}
+
+function buildTreeHTML(node){
+  if(!node || !node.name) return '';
+  const ul = document.createElement('ul');
+  const li = document.createElement('li');
+  const nodeEl = makeNodeElement(node);
+  li.appendChild(nodeEl);
+  if(node.children && node.children.length){
+    const container = document.createElement('div');
+    container.style.paddingLeft = '12px';
+    node.children.forEach(c=>{
+      const subtree = buildTreeHTML(c);
+      container.appendChild(subtree);
+    });
+    li.appendChild(container);
+  }
+  ul.appendChild(li);
+  return ul;
+}
+
+function renderTree(){
+  const area = document.getElementById('treeArea');
+  area.innerHTML = '';
+  if(!rawHierarchy || !rawHierarchy.name){ area.innerHTML = '<div class="subtle">No departments yet.</div>'; return;}
+  const tree = buildTreeHTML(rawHierarchy);
+  area.appendChild(tree);
+  // attach click handlers already set in node creation
+}
+
+/* ------------------- Selection & sidebar ------------------- */
+function selectNode(name){
+  // find metadata by walking rawHierarchy or via /meta
+  // We'll fetch meta (fast)
+  fetch('/meta').then(r=>r.json()).then(list=>{
+    const obj = list.find(x=>x.name===name);
+    if(!obj) return;
+    currentSelected = obj.name;
+    document.getElementById('noSelection').style.display='none';
+    document.getElementById('detailContent').style.display='block';
+    document.getElementById('dName').innerText = obj.name;
+    document.getElementById('dHead').innerText = obj.head ? 'Head: ' + obj.head : '';
+    document.getElementById('dEmp').innerText = obj.employees;
+    document.getElementById('dBud').innerText = formatNum(obj.budget);
+    document.getElementById('dPerf').innerText = obj.perf;
+    // find priority
+    const pr = rawHeap.find(item=>item[1]===obj.name);
+    document.getElementById('dPriority').innerText = pr ? 'P ' + pr[0] : '—';
+  });
+}
+
+/* ------------------- Charts ------------------- */
+function formatNum(v){ return v===undefined ? '0' : (v>=1000 ? (v/1000).toFixed(1)+'k' : v); }
+
+function createCharts(){
+  const pctx = document.getElementById('priorityChart').getContext('2d');
+  const ectx = document.getElementById('empChart').getContext('2d');
+  const bctx = document.getElementById('budgetChart').getContext('2d');
+  const fctx = document.getElementById('perfChart').getContext('2d');
+
+  chartPriority = new Chart(pctx, {type:'bar', data:{labels:[],datasets:[{label:'Priority',data:[]}]}, options:{indexAxis:'y'}});
+  chartEmp = new Chart(ectx, {type:'doughnut', data:{labels:[],datasets:[{data:[]}]}, options:{responsive:true}});
+  chartBud = new Chart(bctx, {type:'bar', data:{labels:[],datasets:[{label:'Budget',data:[]}],}, options:{scales:{y:{beginAtZero:true}}}});
+  chartPerf = new Chart(fctx, {type:'scatter', data:{datasets:[{label:'Perf vs Dept',data:[]}],}, options:{scales:{x:{display:false}, y:{min:0,max:10}}}});
+}
+
+async function updateCharts(){
+  const s = await fetch('/stats').then(r=>r.json());
+  // priority chart uses rawHeap
+  const heapLabels = rawHeap.map(h=>h[1]);
+  const heapVals = rawHeap.map(h=>h[0]);
+  chartPriority.data.labels = heapLabels;
+  chartPriority.data.datasets[0].data = heapVals;
+  chartPriority.update();
+
+  chartEmp.data.labels = s.names;
+  chartEmp.data.datasets[0].data = s.employees;
+  chartEmp.update();
+
+  chartBud.data.labels = s.names;
+  chartBud.data.datasets[0].data = s.budgets;
+  chartBud.update();
+
+  chartPerf.data.datasets[0].data = s.names.map((n,i)=>({x:i,y:s.perf[i], r:6}));
+  chartPerf.update();
+
+  // quick stats
+  document.getElementById('statCount').innerText = s.names.length;
+  document.getElementById('statEmp').innerText = s.employees.reduce((a,b)=>a+b,0);
+  document.getElementById('statBud').innerText = formatNum(s.budgets.reduce((a,b)=>a+b,0));
+}
+
+/* ------------------- Search & Filter ------------------- */
+function searchNodes(){
+  const q = document.getElementById('search').value.toLowerCase();
+  // highlight nodes by changing background; we re-render tree and then walk DOM
+  renderTree();
+  if(!q) return;
+  // naive approach: find all node divs and match innerText
+  document.querySelectorAll('.node').forEach(nd=>{
+    if(nd.innerText.toLowerCase().includes(q)){
+      nd.classList.add('highlight');
+      nd.scrollIntoView({behavior:'smooth',block:'center'});
+    }
+  });
+}
+
+/* ------------------- CRUD modal actions ------------------- */
+function openAddModal(){
+  isEditMode = false;
+  document.getElementById('modalTitle').innerText = 'Add Department';
+  clearModal();
+  showModal();
+}
+function openEditModal(){
+  if(!currentSelected){ alert('Select a department first'); return; }
+  isEditMode = true;
+  document.getElementById('modalTitle').innerText = 'Edit Department';
+  // load data into modal
+  fetch('/meta').then(r=>r.json()).then(list=>{
+    const obj = list.find(x=>x.name===currentSelected);
+    if(!obj) return;
+    document.getElementById('m_name').value = obj.name;
+    document.getElementById('m_parent').value = ''; // leave parent unset for simplicity
+    document.getElementById('m_head').value = obj.head;
+    document.getElementById('m_employees').value = obj.employees;
+    document.getElementById('m_budget').value = obj.budget;
+    document.getElementById('m_perf').value = obj.perf;
+    // find priority
+    const pr = rawHeap.find(item=>item[1]===obj.name);
+    document.getElementById('m_priority').value = pr ? pr[0] : '';
+    showModal();
+  });
+}
+
+function showModal(){ document.getElementById('modal').style.display='flex'; }
+function closeModal(){ document.getElementById('modal').style.display='none'; }
+
+function clearModal(){
+  ['m_name','m_parent','m_head','m_employees','m_budget','m_perf','m_priority'].forEach(id=>document.getElementById(id).value='');
+}
+
+async function saveModal(){
+  const name = document.getElementById('m_name').value.trim();
+  const parent = document.getElementById('m_parent').value.trim();
+  const head = document.getElementById('m_head').value.trim();
+  const employees = document.getElementById('m_employees').value || 0;
+  const budget = document.getElementById('m_budget').value || 0;
+  const perf = document.getElementById('m_perf').value || 0;
+  const priority = document.getElementById('m_priority').value || 999;
+
+  if(!name){ alert('Name required'); return; }
+
+  if(isEditMode){
+    // send to /edit with original name = currentSelected
+    const payload = { name: currentSelected, new_name: name, head, employees, budget, perf, parent, priority };
+    const res = await fetch('/edit',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j = await res.json();
+    if(res.ok){ closeModal(); init(); } else { alert(j.error || 'Edit failed'); }
+  } else {
+    const payload = { name, parent, head, employees, budget, perf, priority };
+    const res = await fetch('/add',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+    const j = await res.json();
+    if(res.ok){ closeModal(); init(); } else { alert(j.error || 'Add failed'); }
+  }
+}
+
+/* ------------------- Delete ------------------- */
+async function deleteSelected(){
+  if(!currentSelected){ alert('Select a department'); return; }
+  if(!confirm('Delete ' + currentSelected + ' ? This removes its subtree.')) return;
+  const res = await fetch('/delete',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({name:currentSelected})});
+  const j = await res.json();
+  if(res.ok){ currentSelected = null; document.getElementById('detailContent').style.display='none'; document.getElementById('noSelection').style.display='block'; init(); } else { alert(j.error || 'Delete failed'); }
+}
+
+/* ------------------- Export (PNG / PDF) ------------------- */
+async function exportPNG(){
+  const el = document.querySelector('.container');
+  html2canvas(el, {scale: 2}).then(canvas=>{
+    const link = document.createElement('a');
+    link.download = 'department_dashboard.png';
+    link.href = canvas.toDataURL();
+    link.click();
+  });
+}
+async function exportPDF(){
+  const { jsPDF } = window.jspdf;
+  const el = document.querySelector('.container');
+  const canvas = await html2canvas(el, {scale:2});
+  const imgData = canvas.toDataURL('image/png');
+  const pdf = new jsPDF('landscape','pt',[canvas.width, canvas.height]);
+  pdf.addImage(imgData, 'PNG', 0, 0, canvas.width, canvas.height);
+  pdf.save('department_dashboard.pdf');
+}
+
+/* ------------------- Theme ------------------- */
+function toggleTheme(){
+  const root = document.documentElement;
+  if(root.style.getPropertyValue('--bg')===''){
+    root.style.setProperty('--bg','#0b1220');
+    // Simple dark flip (for demo)
+  } else {
+    root.style.removeProperty('--bg');
+  }
+  // this is kept minimal; you can expand to full dark mode styling easily
+}
+
+/* ------------------- Init ------------------- */
+async function init(){
+  const {h, heap, meta} = await fetchData();
+  renderTree();
+  await updateCharts();
+}
+
+createCharts();
+init();
+</script>
+</body>
+</html>
